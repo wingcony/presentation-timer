@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Timer Pro</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <audio id="sound-bell" src="sounds/Ring.mp3" preload="auto"></audio>
+
+    <div id="title-container" class="title-container">
+        <input type="text" id="meeting-title" placeholder="会議・セッション名を入力" spellcheck="false">
+    </div>
+
+    <div id="status-bar" class="status-bar"></div>
+
+    <main class="timer-container">
+        <div id="timer-display" class="timer-text">00:00</div>
+        <div id="overtime-container" class="overtime-container hidden">
+            <span class="plus-mark">+</span>
+            <span id="overtime-display" class="overtime-text">00:00</span>
+        </div>
+    </main>
+
+    <footer id="control-panel" class="control-panel">
+        
+        <div class="panel-row input-row">
+            <div class="time-setting-group current-group">
+                <span class="setting-label">現在の設定</span>
+                <div class="time-inputs">
+                    <input type="number" id="current-h" placeholder="0" min="0">
+                    <span class="colon">:</span>
+                    <input type="number" id="current-m" placeholder="0" min="0">
+                    <span class="colon">:</span>
+                    <input type="number" id="current-s" placeholder="0" min="0">
+                </div>
+            </div>
+
+            <div class="arrow-icon">➡</div>
+
+            <div class="time-setting-group next-group">
+                <span class="setting-label">次の設定 (予約)</span>
+                <div class="time-inputs">
+                    <input type="number" id="next-h" placeholder="0" min="0">
+                    <span class="colon">:</span>
+                    <input type="number" id="next-m" placeholder="0" min="0">
+                    <span class="colon">:</span>
+                    <input type="number" id="next-s" placeholder="0" min="0">
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-row button-row">
+            <div class="btn-group-main">
+                <button id="btn-start" class="control-btn" title="スペースキー">▶ 開始</button>
+                <button id="btn-pause" class="control-btn" disabled title="スペースキー">⏸ 停止</button>
+                <button id="btn-reset" class="control-btn" title="Shift + R">↻ リセット</button>
+                <button id="btn-bell" class="control-btn bell-btn" title="Shift + B">🔔 ベル</button>
+            </div>
+            
+            <div class="btn-group-sub">
+                <button id="btn-settings" class="control-btn">⚙ 設定</button>
+                <button id="btn-window" class="control-btn" title="別ウィンドウで開く">❐ 別窓</button>
+                <button id="btn-theme-toggle" class="control-btn theme-btn" title="テーマ切替">🌓</button>
+            </div>
+        </div>
+    </footer>
+
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>詳細設定</h2>
+            <div id="error-msg" class="error-message hidden">入力値を確認してください</div>
+
+            <div class="setting-section">
+                <h3>終了後の挙動</h3>
+                <div class="toggle-group">
+                    <label><input type="radio" name="ot-mode" value="stop" checked> 0で停止 (次は自動適用)</label>
+                    <label><input type="radio" name="ot-mode" value="countup"> カウントアップ (次は手動適用)</label>
+                </div>
+            </div>
+
+            <hr class="separator">
+
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="tab-text">文字色</button>
+                <button class="tab-btn" data-tab="tab-bar">ステータスバー</button>
+            </div>
+
+            <div id="tab-text" class="tab-content active">
+                <div class="phase-row">
+                    <div class="phase-info"><span class="phase-label">開始時</span><span class="phase-desc">00:00 ~</span></div>
+                    <div class="palette-container" id="palette-text-start"></div>
+                </div>
+                <div class="phase-row">
+                    <div class="phase-info">
+                        <span class="phase-label">予鈴 1</span>
+                        <div class="phase-time-input">
+                            <input type="number" id="text-time-1-h" class="tiny-input" placeholder="時"> :
+                            <input type="number" id="text-time-1-m" class="tiny-input" placeholder="分"> :
+                            <input type="number" id="text-time-1-s" class="tiny-input" placeholder="秒">
+                        </div>
+                    </div>
+                    <div class="palette-container" id="palette-text-1"></div>
+                </div>
+                <div class="phase-row">
+                    <div class="phase-info">
+                        <span class="phase-label">予鈴 2</span>
+                        <div class="phase-time-input">
+                            <input type="number" id="text-time-2-h" class="tiny-input" placeholder="時"> :
+                            <input type="number" id="text-time-2-m" class="tiny-input" placeholder="分"> :
+                            <input type="number" id="text-time-2-s" class="tiny-input" placeholder="秒">
+                        </div>
+                    </div>
+                    <div class="palette-container" id="palette-text-2"></div>
+                </div>
+            </div>
+
+            <div id="tab-bar" class="tab-content">
+                <div class="phase-row">
+                    <div class="phase-info">
+                        <span class="phase-label">開始時</span><span class="phase-desc">00:00 ~</span>
+                        <label class="blink-check"><input type="checkbox" id="bar-blink-start"> 点滅</label>
+                    </div>
+                    <div class="palette-container" id="palette-bar-start"></div>
+                </div>
+                <div class="phase-row">
+                    <div class="phase-info">
+                        <span class="phase-label">予鈴 1</span>
+                        <div class="phase-time-input">
+                            <input type="number" id="bar-time-1-h" class="tiny-input" placeholder="時"> :
+                            <input type="number" id="bar-time-1-m" class="tiny-input" placeholder="分"> :
+                            <input type="number" id="bar-time-1-s" class="tiny-input" placeholder="秒">
+                        </div>
+                        <label class="blink-check"><input type="checkbox" id="bar-blink-1"> 点滅</label>
+                    </div>
+                    <div class="palette-container" id="palette-bar-1"></div>
+                </div>
+                <div class="phase-row">
+                    <div class="phase-info">
+                        <span class="phase-label">予鈴 2</span>
+                        <div class="phase-time-input">
+                            <input type="number" id="bar-time-2-h" class="tiny-input" placeholder="時"> :
+                            <input type="number" id="bar-time-2-m" class="tiny-input" placeholder="分"> :
+                            <input type="number" id="bar-time-2-s" class="tiny-input" placeholder="秒">
+                        </div>
+                        <label class="blink-check"><input type="checkbox" id="bar-blink-2"> 点滅</label>
+                    </div>
+                    <div class="palette-container" id="palette-bar-2"></div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button id="btn-close-settings" class="modal-btn">キャンセル</button>
+                <button id="btn-apply-settings" class="modal-btn primary">設定を適用してリセット</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
