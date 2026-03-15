@@ -1,5 +1,5 @@
 /**
- * Presentation Timer Pro v4.1 (Bug Fixes: Sync & Message Clear)
+ * Presentation Timer Pro v4.2 (UI Scaling & Title Layout Fix)
  */
 const bc = new BroadcastChannel('presentation-timer-channel');
 
@@ -140,6 +140,8 @@ function init() {
 
     fillCurrentInputs(config.totalSeconds);
     resetTimerLogic(config.totalSeconds);
+    
+    adjustTitleSize(); // タイトルの初期サイズ調整
 }
 
 function setupSender() {
@@ -156,6 +158,7 @@ function setupSender() {
 
     els.titleInput.addEventListener('input', (e) => {
         state.meetingTitle = e.target.value;
+        adjustTitleSize();
         broadcastState();
     });
 
@@ -230,6 +233,7 @@ function setupReceiver() {
         state.currentTheme = data.currentTheme;
         state.message = data.message;
         
+        adjustTitleSize();
         applyTheme();
         applyLogo();
         applyMessage();
@@ -237,8 +241,23 @@ function setupReceiver() {
 }
 
 // ==========================================
-// Logo & Message Handlers
+// Title, Logo & Message Handlers
 // ==========================================
+
+// ★追加：タイトルの長さに応じてフォントサイズを自動調整
+function adjustTitleSize() {
+    const len = state.meetingTitle.length;
+    let size = 'min(3.5vw, 2rem)'; // デフォルト
+    if (len > 30) {
+        size = 'min(2vw, 1.2rem)';
+    } else if (len > 20) {
+        size = 'min(2.5vw, 1.5rem)';
+    } else if (len > 12) {
+        size = 'min(3vw, 1.8rem)';
+    }
+    els.titleInput.style.fontSize = size;
+}
+
 function handleLogoUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -282,7 +301,6 @@ function applyLogo() {
     }
 }
 
-// ★追加：メッセージを確実に消去するための共通関数
 function clearMessage() {
     state.message.text = '';
     state.message.expiresAt = null;
@@ -363,7 +381,6 @@ function pauseTimer() {
     cancelAnimationFrame(state.animationFrameId);
     state.remainingMs = state.endTime - Date.now();
     
-    // ★追加：停止時にメッセージを消去
     clearMessage();
 
     updateUIState(false);
@@ -373,7 +390,6 @@ function pauseTimer() {
 function resetTimer() {
     pauseTimer();
     
-    // ★追加：リセット時にメッセージを確実に消去（停止中からのリセット対応）
     clearMessage();
 
     const nextTotal = getSecFromInputsHMS(els.nxtH, els.nxtM, els.nxtS);
@@ -413,7 +429,7 @@ function tick() {
     let diff = state.endTime - now;
 
     if (diff <= 0 && config.overtimeMode === 'stop') {
-        pauseTimer(); // 停止処理（中でメッセージ消去・ブロードキャストも実行される）
+        pauseTimer(); 
         state.remainingMs = 0; 
         
         const nextTotal = getSecFromInputsHMS(els.nxtH, els.nxtM, els.nxtS);
@@ -612,7 +628,6 @@ function applySettings() {
         { time: b2Sec, color: b2Col, blink: b2Blink }
     ];
     
-    // ★追加：バグ1の修正（設定適用時に確実にリセットをかける）
     resetTimer();
     
     broadcastState();
