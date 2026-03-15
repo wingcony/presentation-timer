@@ -1,5 +1,5 @@
 /**
- * Presentation Timer Pro v3.3 (Rendering Optimized)
+ * Presentation Timer Pro v4.0 (Logo & Flash Message)
  */
 const bc = new BroadcastChannel('presentation-timer-channel');
 
@@ -26,7 +26,8 @@ let config = {
         { time: Infinity, color: '', blink: false },
         { time: 180, color: '', blink: false },
         { time: 60, color: '', blink: false }
-    ]
+    ],
+    logoData: '' // base64 image data
 };
 
 let state = {
@@ -36,7 +37,14 @@ let state = {
     animationFrameId: null,
     currentTheme: 'dark',
     isReceiver: false,
-    meetingTitle: ''
+    meetingTitle: '',
+    // Flash Message State
+    message: {
+        text: '',
+        color: '#ffffff',
+        bg: '#e60000',
+        expiresAt: null // null or timestamp
+    }
 };
 
 const els = {
@@ -46,6 +54,24 @@ const els = {
     otDisplay: document.getElementById('overtime-display'),
     titleInput: document.getElementById('meeting-title'),
     soundBell: document.getElementById('sound-bell'),
+    
+    // Logo
+    logoImg: document.getElementById('event-logo'),
+    logoUpload: document.getElementById('logo-upload'),
+    btnClearLogo: document.getElementById('btn-clear-logo'),
+
+    // Flash Message
+    msgContainer: document.getElementById('flash-message-container'),
+    msgText: document.getElementById('flash-message-text'),
+    msgPanel: document.getElementById('message-panel'),
+    btnMsgOpen: document.getElementById('btn-msg-open'),
+    btnMsgClose: document.getElementById('btn-msg-close'),
+    btnMsgSend: document.getElementById('btn-msg-send'),
+    btnMsgClear: document.getElementById('btn-msg-clear'),
+    msgInputText: document.getElementById('msg-input'),
+    msgColor: document.getElementById('msg-color'),
+    msgBg: document.getElementById('msg-bg'),
+    msgDuration: document.getElementById('msg-duration'),
     
     // Inputs (Footer)
     curH: document.getElementById('current-h'),
@@ -97,7 +123,6 @@ const els = {
 // Initialization
 // ==========================================
 function init() {
-    // Check Mode
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('mode') === 'receiver') {
         state.isReceiver = true;
@@ -135,13 +160,49 @@ function setupSender() {
     els.btnApply.addEventListener('click', applySettings);
     els.btnTheme.addEventListener('click', toggleTheme);
 
+    // Title Sync
     els.titleInput.addEventListener('input', (e) => {
         state.meetingTitle = e.target.value;
         broadcastState();
     });
 
+    // Inputs Sync
     [els.curH, els.curM, els.curS].forEach(inp => {
         inp.addEventListener('change', updateCurrentConfigFromInputs);
+    });
+
+    // Logo Upload Logic
+    els.logoUpload.addEventListener('change', handleLogoUpload);
+    els.btnClearLogo.addEventListener('click', () => {
+        config.logoData = '';
+        els.logoUpload.value = '';
+        applyLogo();
+        broadcastState();
+    });
+
+    // Message Panel Logic
+    els.btnMsgOpen.addEventListener('click', () => els.msgPanel.classList.toggle('hidden'));
+    els.btnMsgClose.addEventListener('click', () => els.msgPanel.classList.add('hidden'));
+    
+    els.btnMsgSend.addEventListener('click', () => {
+        const text = els.msgInputText.value.trim();
+        if (!text) return;
+        const durationSec = parseInt(els.msgDuration.value, 10);
+        state.message = {
+            text: text,
+            color: els.msgColor.value,
+            bg: els.msgBg.value,
+            expiresAt: durationSec > 0 ? Date.now() + (durationSec * 1000) : Infinity
+        };
+        applyMessage();
+        broadcastState();
+    });
+
+    els.btnMsgClear.addEventListener('click', () => {
+        state.message.text = '';
+        state.message.expiresAt = null;
+        applyMessage();
+        broadcastState();
     });
 
     document.addEventListener('keydown', handleKeyboardShortcuts);
@@ -162,7 +223,9 @@ function setupReceiver() {
     bc.onmessage = (event) => {
         const data = event.data;
         if (!data) return;
+        
         config = data.config; 
+        
         if (data.isRunning) {
             state.endTime = data.endTime;
             state.isRunning = true;
@@ -174,10 +237,75 @@ function setupReceiver() {
             cancelAnimationFrame(state.animationFrameId);
             render(state.remainingMs);
         }
+        
         els.titleInput.value = data.meetingTitle;
         state.currentTheme = data.currentTheme;
+        state.message = data.message;
+        
         applyTheme();
+        applyLogo();
+        applyMessage();
     };
+}
+
+// ==========================================
+// Logo & Message Handlers
+// ==========================================
+function handleLogoUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const img = new Image();
+        img.onload = function() {
+            // Compress Image via Canvas (Max Width 300px)
+            const MAX_WIDTH = 300;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Convert to base64
+            const dataUrl = canvas.toDataURL('image/png', 0.8);
+            config.logoData = dataUrl;
+            applyLogo();
+            broadcastState();
+        }
+        img.src = event.target.result;
+    }
+    reader.readAsDataURL(file);
+}
+
+function applyLogo() {
+    if (config.logoData) {
+        els.logoImg.src = config.logoData;
+        els.logoImg.classList.remove('hidden');
+    } else {
+        els.logoImg.src = '';
+        els.logoImg.classList.add('hidden');
+    }
+}
+
+function applyMessage() {
+    const msg = state.message;
+    if (msg.text && (msg.expiresAt === Infinity || Date.now() < msg.expiresAt)) {
+        els.msgText.textContent = msg.text;
+        els.msgContainer.style.color = msg.color;
+        els.msgContainer.style.backgroundColor = msg.bg;
+        els.msgContainer.classList.remove('hidden');
+    } else {
+        els.msgContainer.classList.add('hidden');
+    }
 }
 
 function handleKeyboardShortcuts(e) {
@@ -196,9 +324,8 @@ function handleKeyboardShortcuts(e) {
 }
 
 // ==========================================
-// Logic
+// Core Timer Logic
 // ==========================================
-
 function updateCurrentConfigFromInputs() {
     if (state.isRunning) return;
     const total = getSecFromInputsHMS(els.curH, els.curM, els.curS);
@@ -285,18 +412,25 @@ function tick() {
     const now = Date.now();
     let diff = state.endTime - now;
 
+    // ★ 修正箇所: 0で自動停止するロジック
     if (diff <= 0 && config.overtimeMode === 'stop') {
+        pauseTimer(); // 確実にシステムを停止させる
+        state.remainingMs = 0; // マイナスを防ぐ
+        
         const nextTotal = getSecFromInputsHMS(els.nxtH, els.nxtM, els.nxtS);
         if (nextTotal > 0) {
-            pauseTimer();
             applyNext(nextTotal);
-            lockCurrentInputs(false);
-            broadcastState();
-            return;
+        } else {
+            render(0); // 次がなければ 0 のまま描画を確定
         }
+        
+        lockCurrentInputs(false);
+        broadcastState();
+        return;
     }
 
     render(diff);
+    applyMessage(); // tick毎にメッセージの有効期限をチェック
     state.animationFrameId = requestAnimationFrame(tick);
 }
 
@@ -315,7 +449,6 @@ function render(ms) {
 
     const text = formatTime(totalSec, config.displayFormat);
     
-    // ★修正: 内容が変わった時だけDOM更新 (チラつき防止の決定打)
     if (els.display.textContent !== text) {
         els.display.textContent = text;
         if (text.length > 5) els.display.classList.add('long-text');
@@ -325,6 +458,7 @@ function render(ms) {
     if (isOvertime) {
         els.display.classList.add('dimmed');
         if (config.overtimeMode === 'countup') {
+            els.otContainer.style.display = 'flex'; // hiddenクラスではなくstyleで制御
             els.otContainer.classList.remove('hidden');
             let otMs = Math.abs(ms);
             let otSec = Math.floor(otMs / 1000);
@@ -336,6 +470,7 @@ function render(ms) {
         }
     } else {
         els.display.classList.remove('dimmed');
+        els.otContainer.style.display = 'none';
         els.otContainer.classList.add('hidden');
     }
 
@@ -351,7 +486,8 @@ function broadcastState() {
         endTime: state.endTime,
         config: config,
         currentTheme: state.currentTheme,
-        meetingTitle: state.meetingTitle
+        meetingTitle: state.meetingTitle,
+        message: state.message
     });
 }
 
@@ -380,7 +516,6 @@ function applyVisualPhases(currentSec) {
         } return prev;
     }, null);
     
-    // 色変更も変更時のみ適用するのがベストだが、CSS変数の場合は負荷が低いのでOK
     els.display.style.color = activeTextPhase ? activeTextPhase.color : '';
 
     let activeBarPhase = config.barSchedule.reduce((prev, curr) => {
