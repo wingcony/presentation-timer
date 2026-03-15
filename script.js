@@ -1,5 +1,5 @@
 /**
- * Presentation Timer Pro v4.0 (Logo & Flash Message)
+ * Presentation Timer Pro v4.1 (Bug Fixes: Sync & Message Clear)
  */
 const bc = new BroadcastChannel('presentation-timer-channel');
 
@@ -27,7 +27,7 @@ let config = {
         { time: 180, color: '', blink: false },
         { time: 60, color: '', blink: false }
     ],
-    logoData: '' // base64 image data
+    logoData: '' 
 };
 
 let state = {
@@ -38,12 +38,11 @@ let state = {
     currentTheme: 'dark',
     isReceiver: false,
     meetingTitle: '',
-    // Flash Message State
     message: {
         text: '',
         color: '#ffffff',
         bg: '#e60000',
-        expiresAt: null // null or timestamp
+        expiresAt: null 
     }
 };
 
@@ -55,12 +54,10 @@ const els = {
     titleInput: document.getElementById('meeting-title'),
     soundBell: document.getElementById('sound-bell'),
     
-    // Logo
     logoImg: document.getElementById('event-logo'),
     logoUpload: document.getElementById('logo-upload'),
     btnClearLogo: document.getElementById('btn-clear-logo'),
 
-    // Flash Message
     msgContainer: document.getElementById('flash-message-container'),
     msgText: document.getElementById('flash-message-text'),
     msgPanel: document.getElementById('message-panel'),
@@ -73,7 +70,6 @@ const els = {
     msgBg: document.getElementById('msg-bg'),
     msgDuration: document.getElementById('msg-duration'),
     
-    // Inputs (Footer)
     curH: document.getElementById('current-h'),
     curM: document.getElementById('current-m'),
     curS: document.getElementById('current-s'),
@@ -81,7 +77,6 @@ const els = {
     nxtM: document.getElementById('next-m'),
     nxtS: document.getElementById('next-s'),
     
-    // Buttons
     btnStart: document.getElementById('btn-start'),
     btnPause: document.getElementById('btn-pause'),
     btnReset: document.getElementById('btn-reset'),
@@ -90,7 +85,6 @@ const els = {
     btnTheme: document.getElementById('btn-theme-toggle'),
     btnWindow: document.getElementById('btn-window'),
     
-    // Modal
     modal: document.getElementById('settings-modal'),
     btnClose: document.getElementById('btn-close-settings'),
     btnApply: document.getElementById('btn-apply-settings'),
@@ -160,18 +154,15 @@ function setupSender() {
     els.btnApply.addEventListener('click', applySettings);
     els.btnTheme.addEventListener('click', toggleTheme);
 
-    // Title Sync
     els.titleInput.addEventListener('input', (e) => {
         state.meetingTitle = e.target.value;
         broadcastState();
     });
 
-    // Inputs Sync
     [els.curH, els.curM, els.curS].forEach(inp => {
         inp.addEventListener('change', updateCurrentConfigFromInputs);
     });
 
-    // Logo Upload Logic
     els.logoUpload.addEventListener('change', handleLogoUpload);
     els.btnClearLogo.addEventListener('click', () => {
         config.logoData = '';
@@ -180,7 +171,6 @@ function setupSender() {
         broadcastState();
     });
 
-    // Message Panel Logic
     els.btnMsgOpen.addEventListener('click', () => els.msgPanel.classList.toggle('hidden'));
     els.btnMsgClose.addEventListener('click', () => els.msgPanel.classList.add('hidden'));
     
@@ -199,9 +189,7 @@ function setupSender() {
     });
 
     els.btnMsgClear.addEventListener('click', () => {
-        state.message.text = '';
-        state.message.expiresAt = null;
-        applyMessage();
+        clearMessage();
         broadcastState();
     });
 
@@ -259,7 +247,6 @@ function handleLogoUpload(e) {
     reader.onload = function(event) {
         const img = new Image();
         img.onload = function() {
-            // Compress Image via Canvas (Max Width 300px)
             const MAX_WIDTH = 300;
             let width = img.width;
             let height = img.height;
@@ -275,7 +262,6 @@ function handleLogoUpload(e) {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
             
-            // Convert to base64
             const dataUrl = canvas.toDataURL('image/png', 0.8);
             config.logoData = dataUrl;
             applyLogo();
@@ -294,6 +280,13 @@ function applyLogo() {
         els.logoImg.src = '';
         els.logoImg.classList.add('hidden');
     }
+}
+
+// ★追加：メッセージを確実に消去するための共通関数
+function clearMessage() {
+    state.message.text = '';
+    state.message.expiresAt = null;
+    applyMessage();
 }
 
 function applyMessage() {
@@ -369,14 +362,21 @@ function pauseTimer() {
     state.isRunning = false;
     cancelAnimationFrame(state.animationFrameId);
     state.remainingMs = state.endTime - Date.now();
+    
+    // ★追加：停止時にメッセージを消去
+    clearMessage();
+
     updateUIState(false);
     broadcastState();
 }
 
 function resetTimer() {
     pauseTimer();
-    const nextTotal = getSecFromInputsHMS(els.nxtH, els.nxtM, els.nxtS);
     
+    // ★追加：リセット時にメッセージを確実に消去（停止中からのリセット対応）
+    clearMessage();
+
+    const nextTotal = getSecFromInputsHMS(els.nxtH, els.nxtM, els.nxtS);
     if (nextTotal > 0) {
         applyNext(nextTotal);
     } else {
@@ -412,16 +412,15 @@ function tick() {
     const now = Date.now();
     let diff = state.endTime - now;
 
-    // ★ 修正箇所: 0で自動停止するロジック
     if (diff <= 0 && config.overtimeMode === 'stop') {
-        pauseTimer(); // 確実にシステムを停止させる
-        state.remainingMs = 0; // マイナスを防ぐ
+        pauseTimer(); // 停止処理（中でメッセージ消去・ブロードキャストも実行される）
+        state.remainingMs = 0; 
         
         const nextTotal = getSecFromInputsHMS(els.nxtH, els.nxtM, els.nxtS);
         if (nextTotal > 0) {
             applyNext(nextTotal);
         } else {
-            render(0); // 次がなければ 0 のまま描画を確定
+            render(0); 
         }
         
         lockCurrentInputs(false);
@@ -430,7 +429,7 @@ function tick() {
     }
 
     render(diff);
-    applyMessage(); // tick毎にメッセージの有効期限をチェック
+    applyMessage(); 
     state.animationFrameId = requestAnimationFrame(tick);
 }
 
@@ -458,7 +457,7 @@ function render(ms) {
     if (isOvertime) {
         els.display.classList.add('dimmed');
         if (config.overtimeMode === 'countup') {
-            els.otContainer.style.display = 'flex'; // hiddenクラスではなくstyleで制御
+            els.otContainer.style.display = 'flex'; 
             els.otContainer.classList.remove('hidden');
             let otMs = Math.abs(ms);
             let otSec = Math.floor(otMs / 1000);
@@ -612,6 +611,9 @@ function applySettings() {
         { time: b1Sec, color: b1Col, blink: b1Blink },
         { time: b2Sec, color: b2Col, blink: b2Blink }
     ];
+    
+    // ★追加：バグ1の修正（設定適用時に確実にリセットをかける）
+    resetTimer();
     
     broadcastState();
     closeSettings();
