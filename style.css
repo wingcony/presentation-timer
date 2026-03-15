@@ -52,10 +52,16 @@ body[data-theme="light"] {
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background-color: var(--bg-color); color: var(--ui-text); font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background-color 0.3s, color 0.3s; position: relative; }
 
-/* Receiver Mode */
+/* --- Receiver Mode (別窓時の設定) --- */
 body.receiver-mode .control-panel, body.receiver-mode #settings-modal, body.receiver-mode .message-panel { display: none !important; }
 body.receiver-mode .title-container input { pointer-events: none; border-bottom: none; }
+/* ★追加: 別窓では常にウォーターマークを非表示にする */
+body.receiver-mode .title-container input::placeholder { color: transparent; }
 body.receiver-mode { cursor: none; }
+
+/* ★追加: タイマー動作中(is-running)は親窓でもウォーターマークと点線を消す */
+body.is-running .title-container input { border-bottom-color: transparent; }
+body.is-running .title-container input::placeholder { color: transparent; }
 
 /* --- Top Bar (Title & Logo) --- */
 .top-bar {
@@ -100,12 +106,9 @@ body.receiver-mode { cursor: none; }
     font-family: 'DSEG7', monospace; 
     font-weight: bold; 
     font-size: min(22vw, 35vh); 
-    
-    /* 根本解決策：行間を広げ、はみ出し描画を許可し、GPUレイヤーのクリッピングを解除 */
     line-height: 1.2; 
     padding: 0.2em 0; 
     overflow: visible;
-
     color: var(--text-default); 
     transition: color 0.3s ease, opacity 0.3s ease, font-size 0.3s ease; 
     text-align: center; width: 100%; white-space: nowrap; 

@@ -1,5 +1,5 @@
 /**
- * Presentation Timer Pro v4.3 (Subtitle & Font Clipping Fix)
+ * Presentation Timer Pro v4.4 (Hide Placeholders when running)
  */
 const bc = new BroadcastChannel('presentation-timer-channel');
 
@@ -38,7 +38,7 @@ let state = {
     currentTheme: 'dark',
     isReceiver: false,
     meetingTitle: '',
-    meetingSubtitle: '', // 追加
+    meetingSubtitle: '',
     message: {
         text: '',
         color: '#ffffff',
@@ -53,7 +53,7 @@ const els = {
     otContainer: document.getElementById('overtime-container'),
     otDisplay: document.getElementById('overtime-display'),
     titleInput: document.getElementById('meeting-title'),
-    subtitleInput: document.getElementById('meeting-subtitle'), // 追加
+    subtitleInput: document.getElementById('meeting-subtitle'),
     soundBell: document.getElementById('sound-bell'),
     
     logoImg: document.getElementById('event-logo'),
@@ -227,17 +227,19 @@ function setupReceiver() {
         if (data.isRunning) {
             state.endTime = data.endTime;
             state.isRunning = true;
+            document.body.classList.add('is-running'); // ★追加: 同期時にクラス付与
             tick(); 
         } else {
             state.isRunning = false;
             state.remainingMs = data.remainingMs;
             state.endTime = null;
+            document.body.classList.remove('is-running'); // ★追加: 停止時にクラス解除
             cancelAnimationFrame(state.animationFrameId);
             render(state.remainingMs);
         }
         
         els.titleInput.value = data.meetingTitle;
-        els.subtitleInput.value = data.meetingSubtitle || ''; // サブタイトル同期
+        els.subtitleInput.value = data.meetingSubtitle || '';
         state.currentTheme = data.currentTheme;
         state.message = data.message;
         
@@ -509,7 +511,7 @@ function broadcastState() {
         config: config,
         currentTheme: state.currentTheme,
         meetingTitle: state.meetingTitle,
-        meetingSubtitle: state.meetingSubtitle, // サブタイトルも送信
+        meetingSubtitle: state.meetingSubtitle,
         message: state.message
     });
 }
@@ -561,6 +563,13 @@ function updateUIState(running) {
     els.btnStart.disabled = running;
     els.btnPause.disabled = !running;
     els.btnSettings.disabled = running;
+    
+    // ★追加: 動作中かどうかのクラスを付与し、CSSと連動させる
+    if (running) {
+        document.body.classList.add('is-running');
+    } else {
+        document.body.classList.remove('is-running');
+    }
 }
 
 function lockCurrentInputs(locked) {
