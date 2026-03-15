@@ -1,5 +1,5 @@
 /**
- * Presentation Timer Pro v4.2 (UI Scaling & Title Layout Fix)
+ * Presentation Timer Pro v4.3 (Subtitle & Font Clipping Fix)
  */
 const bc = new BroadcastChannel('presentation-timer-channel');
 
@@ -38,6 +38,7 @@ let state = {
     currentTheme: 'dark',
     isReceiver: false,
     meetingTitle: '',
+    meetingSubtitle: '', // 追加
     message: {
         text: '',
         color: '#ffffff',
@@ -52,6 +53,7 @@ const els = {
     otContainer: document.getElementById('overtime-container'),
     otDisplay: document.getElementById('overtime-display'),
     titleInput: document.getElementById('meeting-title'),
+    subtitleInput: document.getElementById('meeting-subtitle'), // 追加
     soundBell: document.getElementById('sound-bell'),
     
     logoImg: document.getElementById('event-logo'),
@@ -141,7 +143,7 @@ function init() {
     fillCurrentInputs(config.totalSeconds);
     resetTimerLogic(config.totalSeconds);
     
-    adjustTitleSize(); // タイトルの初期サイズ調整
+    adjustTitleSize(); 
 }
 
 function setupSender() {
@@ -159,6 +161,11 @@ function setupSender() {
     els.titleInput.addEventListener('input', (e) => {
         state.meetingTitle = e.target.value;
         adjustTitleSize();
+        broadcastState();
+    });
+
+    els.subtitleInput.addEventListener('input', (e) => {
+        state.meetingSubtitle = e.target.value;
         broadcastState();
     });
 
@@ -230,6 +237,7 @@ function setupReceiver() {
         }
         
         els.titleInput.value = data.meetingTitle;
+        els.subtitleInput.value = data.meetingSubtitle || ''; // サブタイトル同期
         state.currentTheme = data.currentTheme;
         state.message = data.message;
         
@@ -244,16 +252,15 @@ function setupReceiver() {
 // Title, Logo & Message Handlers
 // ==========================================
 
-// ★追加：タイトルの長さに応じてフォントサイズを自動調整
 function adjustTitleSize() {
     const len = state.meetingTitle.length;
-    let size = 'min(3.5vw, 2rem)'; // デフォルト
+    let size = 'min(3vw, 1.8rem)'; 
     if (len > 30) {
-        size = 'min(2vw, 1.2rem)';
+        size = 'min(1.5vw, 1rem)';
     } else if (len > 20) {
-        size = 'min(2.5vw, 1.5rem)';
+        size = 'min(2vw, 1.2rem)';
     } else if (len > 12) {
-        size = 'min(3vw, 1.8rem)';
+        size = 'min(2.5vw, 1.5rem)';
     }
     els.titleInput.style.fontSize = size;
 }
@@ -502,6 +509,7 @@ function broadcastState() {
         config: config,
         currentTheme: state.currentTheme,
         meetingTitle: state.meetingTitle,
+        meetingSubtitle: state.meetingSubtitle, // サブタイトルも送信
         message: state.message
     });
 }

@@ -14,7 +14,8 @@
         <div class="top-bar-side"></div>
         
         <div id="title-container" class="title-container">
-            <input type="text" id="meeting-title" placeholder="会議・セッション名を入力" spellcheck="false">
+            <input type="text" id="meeting-title" class="title-input" placeholder="会議・セッション名" spellcheck="false">
+            <input type="text" id="meeting-subtitle" class="subtitle-input" placeholder="サブタイトル (任意)" spellcheck="false">
         </div>
         
         <div class="top-bar-side logo-container">
@@ -38,7 +39,6 @@
     </main>
 
     <footer id="control-panel" class="control-panel">
-        
         <div class="panel-row input-row">
             <div class="time-setting-group current-group">
                 <span class="setting-label">現在の設定</span>
@@ -95,8 +95,8 @@
                 <select id="msg-duration">
                     <option value="0">無期限</option>
                     <option value="3">3秒</option>
-                    <option value="5">5秒</option>
-                    <option value="10" selected>10秒</option>
+                    <option value="5" selected>5秒</option>
+                    <option value="10">10秒</option>
                 </select>
             </label>
         </div>
